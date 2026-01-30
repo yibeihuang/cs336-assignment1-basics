@@ -2,14 +2,17 @@
 import os
 import regex as re
 import multiprocessing as mp
+from tqdm import tqdm
 from functools import partial
+
+import psutil
 from collections import Counter, defaultdict
 from typing import Iterator
 from cs336_basics.chunk_file import iter_chunks_by_string
 
 
 # Special tokens to be added to the vocabulary
-NUM_PROCESSES = 4
+NUM_PROCESSES = 8
 # When file is larger than this (bytes), use streaming chunking instead of loading all
 STREAMING_THRESHOLD_BYTES = 100 * 1024 * 1024  # 100 MiB
 STREAM_READ_SIZE = 256 * 1024  # 256 KiB per read
@@ -135,18 +138,24 @@ def train_bpe(input_path: str,
 
     num_merges = vocab_size - len(vocab)
     merges = []
-    for i in range(num_merges):
+    process = psutil.Process()
+    pbar = tqdm(range(num_merges), desc="BPE merges", unit="merge")
+    for i in pbar:
         pair_freqs = compute_pair_freqs(splits, frequency_dict)
         if not pair_freqs:
             break
-        
+
         # Find the pair with maximum frequency
         # Use max() with key function for efficiency - O(n) but cleaner and potentially faster
         # For ties, lexicographically larger pair wins (standard BPE behavior)
         best_pair = max(pair_freqs.items(), key=lambda x: (x[1], x[0]))[0]
-        
+
         splits = merge_pair(*best_pair, splits)
         merges.append(best_pair)
         vocab[len(vocab)] = best_pair[0] + best_pair[1]
-    
+
+        # Show current process RSS in MiB
+        rss_mib = process.memory_info().rss / (1024 * 1024)
+        pbar.set_postfix(mem_mib=f"{rss_mib:.1f}")
+
     return (vocab, merges)
