@@ -216,6 +216,20 @@ def test_unicode_string_matches_tiktoken():
     assert reference_tokenizer.decode(reference_ids) == test_string
 
 
+
+# Notes:
+# Special tokens like <|endoftext|> were never returned as a single piece by pre_tokenize,
+# because the (PAT) branch was matching things like " <|" first. Fixing that in pre_tokenize would have meant more complex regex (lookaheads, etc.).
+# Approach: Handle special tokens in the tokenizer instead of in pre_tokenize:
+# tokenizer.py
+# _split_by_special_tokens(text)
+# Splits text into segments that are either a special token or normal text. Special tokens are tried longest first (e.g. "<|endoftext|><|endoftext|>" before "<|endoftext|>") so overlapping special tokens are correct.
+# encode()
+# If there are no special tokens: same as before (pre-tokenize with None, then BPE).
+# If there are special tokens: split with _split_by_special_tokens, then for each segment either append the special token’s id or run pre_tokenize(part, None) and BPE on that part.
+# bpe_tokenizer.py
+# pre_tokenize is unchanged: same (special)|(PAT) logic, no extra regex.
+# So special-token handling lives in the tokenizer’s encode/split logic, and pre_tokenize stays simple.
 def test_roundtrip_unicode_string_with_special_tokens():
     tokenizer = get_tokenizer_from_vocab_merges_path(
         vocab_path=VOCAB_PATH, merges_path=MERGES_PATH, special_tokens=["<|endoftext|>"]

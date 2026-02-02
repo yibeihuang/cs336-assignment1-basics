@@ -17,16 +17,19 @@ NUM_PROCESSES = 8
 STREAMING_THRESHOLD_BYTES = 100 * 1024 * 1024  # 100 MiB
 STREAM_READ_SIZE = 256 * 1024  # 256 KiB per read
 
+# Regex for GPT-2 style pre-tokenization: contractions, words, numbers, punctuation, whitespace
+PRETOKENIZE_PATTERN = (
+    r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
+)
 
-def pre_tokenize(chunk: str, special_tokens: list[str]) -> Iterator[re.Match]:
-    """
-    Pre-tokenize the training corpus into an iterator of strings.
-    """
+
+def pre_tokenize(chunk: str, special_tokens: list[str] | None = None) -> Iterator[re.Match]:
+    """Pre-tokenize text into an iterator of regex matches (words, punctuation, etc.)."""
+    if special_tokens is None:
+        return re.finditer(PRETOKENIZE_PATTERN, chunk)
     special_pattern = "|".join(re.escape(t) for t in special_tokens)
-
-    PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
-    combined_pat = f"({special_pattern})|{PAT}"
-    return re.finditer(combined_pat, chunk)
+    combined = f"({special_pattern})|({PRETOKENIZE_PATTERN})"
+    return re.finditer(combined, chunk)
 
 
 def process_chunk(special_tokens: list[str], chunk: str):
@@ -35,8 +38,7 @@ def process_chunk(special_tokens: list[str], chunk: str):
 
 
 def compute_pair_freqs(splits: dict[bytes, list[bytes]], frequency_dict: dict[bytes, int]):
-    """Calculate occurence frequence of each remaining pair.
-    """
+    """Calculate occurrence frequency of each remaining BPE pair."""
     pair_freqs = defaultdict(int)
     for word_in_byte, freq in frequency_dict.items():
         split = splits.get(word_in_byte)
