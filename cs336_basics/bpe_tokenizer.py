@@ -1,4 +1,12 @@
-# This is a BPE tokenizer implementation.
+'''
+This is a BPE tokenizer implementation.
+
+The steps are:
+1. Pre-tokenize the text into an iterator of regex matches (words, punctuation, etc.).
+2. Compute the occurrence frequency of each remaining BPE pair.
+3. Find the pair with maximum frequency and merge it.
+4. Repeat until the vocabulary size is reached.
+'''
 import os
 import regex as re
 import multiprocessing as mp
