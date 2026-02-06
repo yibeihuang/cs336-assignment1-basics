@@ -23,6 +23,6 @@ class Linear(nn.Module):
         nn.init.trunc_normal_(self.weights, std=std, a=-3 * std, b=3 * std)
 
     def forward(self, X: torch.Tensor) -> torch.Tensor:
-        """Apply the linear transformation to the input tensor.
+        """Apply the linear transformation to the input tensor. y = Wx
         """
         return einsum(self.weights, X, "d_out d_in, ... d_in -> ... d_out")
