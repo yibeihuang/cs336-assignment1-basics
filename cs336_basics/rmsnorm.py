@@ -16,6 +16,7 @@ class RMSNorm(nn.Module):
         super().__init__()
         self.d_model = d_model
         self.eps = eps
+        self.in_type = dtype
         # Initialize the scale parameter
         self.gamma = nn.Parameter(torch.empty(d_model, device=device, dtype=dtype))
         std = math.sqrt(2 / (d_model + d_model))
@@ -28,4 +29,4 @@ class RMSNorm(nn.Module):
         """
         X = X.to(torch.float32)
         rms_x = torch.sqrt(torch.mean(X ** 2, dim=-1, keepdim=True) + self.eps)
-        return einsum(X / rms_x, self.gamma, "... d_model, d_model -> ... d_model")
+        return einsum(X / rms_x, self.gamma, "... d_model, d_model -> ... d_model").to(self.in_type)

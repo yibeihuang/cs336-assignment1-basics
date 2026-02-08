@@ -38,13 +38,13 @@ class SwiGLU(nn.Module):
         """Apply the positionwise feedforward layer to the input tensor.
         FFN(x) = SwiGLU(x, W1, W2, W3) = W2(SiLU(W1x) ⊙ W3x)
         """
-        # W1x
+        # part 1:W1x
         swish_input = einsum(self.w1, X, "d_ff d_model, ... d_model -> ... d_ff")
-        # SiLU(W1x) = W1x * sigmoid(W1x)
-        swish_gate = einsum(swish_input, torch.sigmoid(swish_input), "... d_ff, ... d_ff -> ... d_ff")
-        # W3x
-        value = einsum(self.w3, X, "d_ff d_model, ... d_model -> ... d_ff")
+        # part 2: SiLU(x) = x * sigmoid(x) = x / (1 + e^-x)
+        silu_output = einsum(swish_input, torch.sigmoid(swish_input), "... d_ff, ... d_ff -> ... d_ff")
+        # part 3: W3x
+        right_val = einsum(self.w3, X, "d_ff d_model, ... d_model -> ... d_ff")
         # W2(SiLU(W1x) ⊙ W3x)
         return einsum(
             self.w2,
-            einsum(swish_gate, value, "... d_ff, ... d_ff -> ... d_ff"), "d_model d_ff, ... d_ff -> ... d_model")
+            einsum(silu_output, right_val, "... d_ff, ... d_ff -> ... d_ff"), "d_model d_ff, ... d_ff -> ... d_model")
