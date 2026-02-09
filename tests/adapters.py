@@ -6,6 +6,7 @@ from typing import IO, Any, BinaryIO
 
 import numpy.typing as npt
 import torch
+import cs336_basics.utils as utils
 from jaxtyping import Bool, Float, Int
 from torch import Tensor
 from cs336_basics.bpe_tokenizer import train_bpe
@@ -443,7 +444,7 @@ def run_softmax(in_features: Float[Tensor, " ..."], dim: int) -> Float[Tensor, "
         Float[Tensor, "..."]: Tensor of with the same shape as `in_features` with the output of
         softmax normalizing the specified `dim`.
     """
-    raise NotImplementedError
+    return utils.softmax(in_features, dim)
 
 
 def run_cross_entropy(
