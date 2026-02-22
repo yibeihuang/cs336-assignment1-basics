@@ -16,6 +16,7 @@ from cs336_basics.embedding import Embedding
 from cs336_basics.rmsnorm import RMSNorm
 from cs336_basics.positionwise_feedforward import SwiGLU
 from cs336_basics.rope import RoPE
+from cs336_basics.multihead_self_attention import MultiheadSelfAttention
 
 def run_linear(
     d_in: int,
@@ -149,7 +150,9 @@ def run_multihead_self_attention(
         Float[Tensor, " ... sequence_length d_out"]: Tensor with the output of running your optimized, batched multi-headed attention
         implementation with the given QKV projection weights and input features.
     """
-    raise NotImplementedError
+    model = MultiheadSelfAttention(d_model, num_heads)
+    model.load_state_dict({"q_proj": q_proj_weight, "k_proj": k_proj_weight, "v_proj": v_proj_weight, "o_proj": o_proj_weight})
+    return model(in_features)
 
 
 def run_multihead_self_attention_with_rope(
@@ -189,7 +192,15 @@ def run_multihead_self_attention_with_rope(
         Float[Tensor, " ... sequence_length d_out"]: Tensor with the output of running your optimized, batched multi-headed attention
         implementation with the given QKV projection weights and input features.
     """
-    raise NotImplementedError
+    model = MultiheadSelfAttention(d_model, num_heads)
+    model.load_state_dict(
+        {"q_proj": q_proj_weight, "k_proj": k_proj_weight, "v_proj": v_proj_weight, "o_proj": o_proj_weight}
+    )
+    rope = RoPE(theta, d_model // num_heads, max_seq_len, device=in_features.device)
+    token_positions = token_positions if token_positions is not None else torch.arange(
+        in_features.shape[1], device=in_features.device
+    ).unsqueeze(0).expand(in_features.shape[0], -1)
+    return model.forward_with_rope(in_features, rope, token_positions)
 
 
 def run_rope(
