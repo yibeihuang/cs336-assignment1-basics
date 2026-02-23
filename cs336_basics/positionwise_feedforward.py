@@ -10,10 +10,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from einops import einsum
 
-class SwiGLU(nn.Module):
+class PositionwiseFeedforward(nn.Module):
     def __init__(self, d_model: int, d_ff: int, device=None, dtype=None):
         """
-        Initialize a SwiGLU layer.
+        Initialize a PositionwiseFeedforward layer.
 
         Args:
             d_model (int): The dimensionality of the input and output.

@@ -14,9 +14,10 @@ from cs336_basics.tokenizer import Tokenizer
 from cs336_basics.linear import Linear
 from cs336_basics.embedding import Embedding
 from cs336_basics.rmsnorm import RMSNorm
-from cs336_basics.positionwise_feedforward import SwiGLU
+from cs336_basics.positionwise_feedforward import PositionwiseFeedforward
 from cs336_basics.rope import RoPE
 from cs336_basics.multihead_self_attention import MultiheadSelfAttention
+from cs336_basics.transformer_block import TransformerBlock
 
 def run_linear(
     d_in: int,
@@ -93,7 +94,7 @@ def run_swiglu(
     # swiglu.w1.weight.data = w1_weight
     # swiglu.w2.weight.data = w2_weight
     # swiglu.w3.weight.data = w3_weight
-    model = SwiGLU(d_model, d_ff, device=w1_weight.device, dtype=w1_weight.dtype)
+    model = PositionwiseFeedforward(d_model, d_ff, device=w1_weight.device, dtype=w1_weight.dtype)
     model.load_state_dict({"w1": w1_weight, "w2": w2_weight, "w3": w3_weight})
     return model(in_features)
 
@@ -295,7 +296,27 @@ def run_transformer_block(
         Float[Tensor, "batch sequence_length d_model"] Tensor with the output of
         running the Transformer block on the input features while using RoPE.
     """
-    raise NotImplementedError
+    model = TransformerBlock(d_model, num_heads, d_ff, theta, max_seq_len)
+    # Map reference state_dict keys to our model's parameter names
+    key_mapping = {
+        "ln1.weight": "ln1.gamma",
+        "ln2.weight": "ln2.gamma",
+        'attn.q_proj.weight': 'attn.q_proj',
+        'attn.k_proj.weight': 'attn.k_proj',
+        'attn.v_proj.weight': 'attn.v_proj',
+        "attn.output_proj.weight": "attn.o_proj",
+        'ffn.w1.weight': 'ffn.w1',
+        'ffn.w2.weight': 'ffn.w2',
+        'ffn.w3.weight': 'ffn.w3',
+    }
+    remapped = {}
+    for k, v in weights.items():
+        if k in key_mapping:
+            remapped[key_mapping[k]] = v
+        else:
+            raise ValueError(f"Unknown weight key: {k}")
+    model.load_state_dict(remapped)
+    return model(in_features)
 
 
 def run_transformer_lm(

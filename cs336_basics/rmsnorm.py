@@ -1,5 +1,8 @@
 """
 RMSNorm layer implementation.
+
+RMSNorm(x) = x / sqrt(mean(x^2) + eps) * gamma
+where x ∈ Rdmodel , gamma ∈ Rdmodel , and eps is a small constant for numerical stability.
 """
 
 import math
