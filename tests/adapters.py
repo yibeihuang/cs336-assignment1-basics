@@ -18,6 +18,7 @@ from cs336_basics.positionwise_feedforward import PositionwiseFeedforward
 from cs336_basics.rope import RoPE
 from cs336_basics.multihead_self_attention import MultiheadSelfAttention
 from cs336_basics.transformer_block import TransformerBlock
+from cs336_basics.transformer_lm import TransformerLM
 
 def run_linear(
     d_in: int,
@@ -398,7 +399,26 @@ def run_transformer_lm(
         Float[Tensor, "batch_size sequence_length vocab_size"]: Tensor with the predicted unnormalized
         next-word distribution for each token.
     """
-    raise NotImplementedError
+    model = TransformerLM(vocab_size, context_length, num_layers, d_model, num_heads, d_ff, rope_theta, max_seq_len=context_length)
+    # Map reference state_dict keys to our model's parameter names
+    key_mapping = {
+        "token_embeddings.weight": "embedding.embeddings",
+        "ln_final.weight": "ln.gamma",
+        "lm_head.weight": "linear.weights",
+    }
+    for i in range(num_layers):
+        key_mapping[f"layers.{i}.attn.q_proj.weight"] = f"transformer_blocks.{i}.attn.q_proj"
+        key_mapping[f"layers.{i}.attn.k_proj.weight"] = f"transformer_blocks.{i}.attn.k_proj"
+        key_mapping[f"layers.{i}.attn.v_proj.weight"] = f"transformer_blocks.{i}.attn.v_proj"
+        key_mapping[f"layers.{i}.attn.output_proj.weight"] = f"transformer_blocks.{i}.attn.o_proj"
+        key_mapping[f"layers.{i}.ln1.weight"] = f"transformer_blocks.{i}.ln1.gamma"
+        key_mapping[f"layers.{i}.ln2.weight"] = f"transformer_blocks.{i}.ln2.gamma"
+        key_mapping[f"layers.{i}.ffn.w1.weight"] = f"transformer_blocks.{i}.ffn.w1"
+        key_mapping[f"layers.{i}.ffn.w2.weight"] = f"transformer_blocks.{i}.ffn.w2"
+        key_mapping[f"layers.{i}.ffn.w3.weight"] = f"transformer_blocks.{i}.ffn.w3"
+    remapped = {key_mapping[k]: v for k, v in weights.items()}
+    model.load_state_dict(remapped)
+    return model(in_indices)
 
 
 def run_rmsnorm(
